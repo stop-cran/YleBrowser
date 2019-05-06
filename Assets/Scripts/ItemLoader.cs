@@ -1,9 +1,7 @@
 ﻿using Assets.Scripts;
 using System;
 using System.Collections;
-using System.Linq;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.UI;
 
 public class ItemLoader : MonoBehaviour
@@ -21,23 +19,30 @@ public class ItemLoader : MonoBehaviour
 
     public void Start()
     {
-        GetComponentInParent<ScrollRect>().onValueChanged.AddListener(LoadMore);
+        GetComponentInParent<ScrollRect>()
+            .onValueChanged
+            .AddListener(vector =>
+                StartCoroutine(
+                    LoadMore(vector,
+                        new YleApiClient(baseUrl, appId, appKey))));
         content = transform.Find("Viewport").Find("Content");
     }
 
-    public void LoadMore(Vector2 vector)
+    public IEnumerator LoadMore(Vector2 vector, IYleApiClient searcher)
     {
         if (!loadInProgress && !string.IsNullOrWhiteSpace(currentText) && vector.y <= 0.1)
         {
             Debug.Log("Searching more items...");
 
-            StartCoroutine(
-                SearchItems(results =>
-                    OnReceivedModels(results)));
+            yield return StartCoroutine(SearchItems(searcher));
         }
     }
 
-    public void Search(string text)
+    public void Search(string text) =>
+        StartCoroutine(CoSearch(text,
+            new YleApiClient(baseUrl, appId, appKey)));
+
+    public IEnumerator CoSearch(string text, IYleApiClient searcher)
     {
         foreach (Transform child in content)
             Destroy(child.gameObject);
@@ -55,20 +60,8 @@ public class ItemLoader : MonoBehaviour
             {
                 currentText = newText;
 
-                StartCoroutine(
-                    SearchItems(results =>
-                        OnReceivedModels(results)));
+                yield return StartCoroutine(SearchItems(searcher));
             }
-        }
-    }
-
-    private void OnReceivedModels(ItemModel[] items)
-    {
-        foreach (var model in items)
-        {
-            var instance = Instantiate(itemPrefab.gameObject);
-            instance.transform.SetParent(content, false);
-            InitializeItemView(instance, model);
         }
     }
 
@@ -84,7 +77,7 @@ public class ItemLoader : MonoBehaviour
             });
     }
 
-    private IEnumerator SearchItems(Action<ItemModel[]> callback)
+    private IEnumerator SearchItems(IYleApiClient searcher)
     {
         if (!loadInProgress)
             try
@@ -93,33 +86,19 @@ public class ItemLoader : MonoBehaviour
 
                 Debug.Log($"Searching \"{currentText}\", offset = {content.childCount}...");
 
-                using (var request = UnityWebRequest.Get($"{baseUrl}/v1/programs/items.json?app_id={appId}&app_key={appKey}&limit={loadCount}&offset={content.childCount}&language=fi&q={currentText}"))
+                yield return searcher.Search(currentText, content.childCount, loadCount);
+
+                if (!searcher.Success)
+                    Debug.LogError(searcher.Error);
+                else
                 {
-                    yield return request.SendWebRequest();
+                    Debug.Log($"Success, found {searcher.Result.Count} items.");
 
-                    if (request.isNetworkError)
-                        Debug.LogError(request.error);
-                    else
+                    foreach (var item in searcher.Result)
                     {
-                        // RK TODO: wait for request.downloadHandler.isDone
-                        var root = JsonUtility.FromJson<YleModel>(request.downloadHandler.text);
-
-                        Debug.Log($"Success, found {root.data[0].subject.Last().title.fi} items.");
-
-                        callback((from data in root.data
-                                  let publicationEvent = data.publicationEvent.Count == 1 ? data.publicationEvent[0] : null
-                                  select new ItemModel
-                                  {
-                                      title = data.title?.fi,
-                                      subject = string.Join(", ",
-                                          data.subject
-                                              .Select(s => s.title?.fi?.Trim())
-                                              .Where(s => !string.IsNullOrEmpty(s))),
-                                      series = data.partOfSeries?.title?.fi,
-                                      audio = string.Join(", ", data.audio.SelectMany(a => a.language)),
-                                      @from = FormatDataTime(publicationEvent?.startTime),
-                                      to = FormatDataTime(publicationEvent?.endTime)
-                                  }).ToArray());
+                        var instance = Instantiate(itemPrefab.gameObject);
+                        instance.transform.SetParent(content, false);
+                        InitializeItemView(instance, item);
                     }
                 }
             }
@@ -128,9 +107,4 @@ public class ItemLoader : MonoBehaviour
                 loadInProgress = false;
             }
     }
-
-    private static string FormatDataTime(string dt) =>
-        dt != null && DateTime.TryParse(dt, out var parsed)
-            ? parsed.ToString()
-            : null;
 }
