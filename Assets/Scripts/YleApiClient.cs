@@ -44,7 +44,7 @@ namespace Assets.Scripts
                                   let publicationEvent = data.publicationEvent.Count == 1 ? data.publicationEvent[0] : null
                                   select new ItemModel
                                   {
-                                      title = data.title?.fi,
+                                      title = data.title?.fi ?? "--No title--",
                                       subject = string.Join(", ",
                                           data.subject
                                               .Select(s => s.title?.fi?.Trim())

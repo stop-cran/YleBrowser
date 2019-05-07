@@ -6,12 +6,12 @@ namespace Assets.Scripts
 {
     public class ItemView
     {
-        public Text titleText;
         private readonly RectTransform rectTransform;
         private bool expanded;
         private readonly Animator animator;
+        private readonly Text titleText, seriesText, subjectText, audioText, fromText, toText;
 
-        public ItemView(GameObject panel, ItemModel model)
+        public ItemView(GameObject panel)
         {
             rectTransform = panel.GetComponent<RectTransform>();
 
@@ -19,15 +19,25 @@ namespace Assets.Scripts
 
             animator = panel.GetComponent<Animator>();
 
-            panel.transform.Find("TitleText").GetComponent<Text>().text = model.title ?? "Ei suomenkielistä nimeä";
+            titleText = panel.transform.Find("TitleText").GetComponent<Text>();
 
             var detailsPanel = panel.transform.Find("DetailsPanel");
 
-            detailsPanel.Find("SeriesText").GetComponent<Text>().text = model.series;
-            detailsPanel.Find("SubjectText").GetComponent<Text>().text = model.subject;
-            detailsPanel.Find("AudioText").GetComponent<Text>().text = model.audio;
-            detailsPanel.Find("FromText").GetComponent<Text>().text = model.from;
-            detailsPanel.Find("ToText").GetComponent<Text>().text = model.to;
+            seriesText = detailsPanel.Find("SeriesText").GetComponent<Text>();
+            subjectText = detailsPanel.Find("SubjectText").GetComponent<Text>();
+            audioText = detailsPanel.Find("AudioText").GetComponent<Text>();
+            fromText = detailsPanel.Find("FromText").GetComponent<Text>();
+            toText = detailsPanel.Find("ToText").GetComponent<Text>();
+        }
+
+        public void SetTexts(ItemModel model)
+        {
+            titleText.text = model.title;
+            seriesText.text = model.series;
+            subjectText.text = model.subject;
+            audioText.text = model.audio;
+            fromText.text = model.from;
+            toText.text = model.to;
         }
 
         public event Action OnExpand;

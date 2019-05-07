@@ -85,7 +85,9 @@ public class ItemLoader : MonoBehaviour
                     foreach (var item in searcher.Result)
                     {
                         var instance = Instantiate(itemPrefab.gameObject);
-                        var view = new ItemView(instance, item);
+                        var view = new ItemView(instance);
+
+                        view.SetTexts(item);
 
                         instance.transform.SetParent(content, false);
 
