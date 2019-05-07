@@ -10,12 +10,9 @@ namespace Assets.Scripts
         private readonly RectTransform rectTransform;
         private bool expanded;
         private readonly Animator animator;
-        private readonly Action<ItemView> onExpand;
 
-        public ItemView(GameObject panel, ItemModel model, Action<ItemView> onExpand)
+        public ItemView(GameObject panel, ItemModel model)
         {
-            this.onExpand = onExpand;
-
             rectTransform = panel.GetComponent<RectTransform>();
 
             panel.GetComponent<Button>().onClick.AddListener(OnClick);
@@ -33,6 +30,8 @@ namespace Assets.Scripts
             detailsPanel.Find("ToText").GetComponent<Text>().text = model.to;
         }
 
+        public event Action OnExpand;
+
         private void OnClick()
         {
             if (expanded)
@@ -40,7 +39,7 @@ namespace Assets.Scripts
             else
             {
                 animator.Play("Expand");
-                onExpand(this);
+                OnExpand?.Invoke();
             }
 
             expanded = !expanded;

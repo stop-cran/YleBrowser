@@ -65,18 +65,6 @@ public class ItemLoader : MonoBehaviour
         }
     }
 
-    private void InitializeItemView(GameObject instance, ItemModel model)
-    {
-        var view = new ItemView(instance,
-            model,
-            thisView =>
-            {
-                expandedView?.Collapse();
-
-                expandedView = thisView;
-            });
-    }
-
     private IEnumerator SearchItems(IYleApiClient searcher)
     {
         if (!loadInProgress)
@@ -97,8 +85,16 @@ public class ItemLoader : MonoBehaviour
                     foreach (var item in searcher.Result)
                     {
                         var instance = Instantiate(itemPrefab.gameObject);
+                        var view = new ItemView(instance, item);
+
                         instance.transform.SetParent(content, false);
-                        InitializeItemView(instance, item);
+
+                        view.OnExpand += () =>
+                        {
+                            expandedView?.Collapse();
+
+                            expandedView = view;
+                        };
                     }
                 }
             }
